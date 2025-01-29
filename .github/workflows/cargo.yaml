@@ -35,9 +35,7 @@ jobs:
         with:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Clippy check
-        run: cargo clippy --all-targets --all-features --workspace
-      - name: Clippy fix
+      - name: Clippy check and fix
         run: cargo clippy --fix --all-targets --all-features --workspace
       - name: Check formatting
         run: cargo fmt --all
@@ -60,4 +58,4 @@ jobs:
       - name: Check documentation
         env:
           RUSTDOCFLAGS: -D warnings
-        run: cargo doc --no-deps --document-private-items --all-features --workspace --examples --all-targets
+        run: cargo doc --no-deps --document-private-items --all-features --workspace --examples
