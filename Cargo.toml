@@ -14,3 +14,4 @@ keywords = ["cli"]
 
 [dependencies]
 clap = { version = "4.5.27", features = ["derive"] }
+zstd = { version = "0.13.2", features = [] }
