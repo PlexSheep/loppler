@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use std::env::args;
 use std::path::PathBuf;
 
 const HELP_TEMPLATE: &str = r"{about-section}
