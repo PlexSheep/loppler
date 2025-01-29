@@ -14,7 +14,7 @@ Simple local file backups with a bit of compression
 * [docs.rs](https://docs.rs/crate/loppler/)
 
 loppler creates backup copies of files and directories right where they are
-- just add .bak, .bak.d, or .tar.zstd if you need them smaller. No cloud,
+– just add .bak, .bak.d, or .tar.zstd if you need them smaller. No cloud,
 no complicated configs, just quick local copies when you need them.
 
 Perfect for that "let me backup this config before I break it" moment or
