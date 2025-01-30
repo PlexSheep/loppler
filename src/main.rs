@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
@@ -15,7 +16,7 @@ Author: {author-with-newline}
 #[command(
     author = env!("CARGO_PKG_AUTHORS"),
     version = env!("CARGO_PKG_VERSION"),
-    about = "Simple local backups with a bit of compression magic",
+    about = "Simple local backups with a bit of compression",
     help_template = HELP_TEMPLATE
 )]
 struct Cli {
@@ -122,11 +123,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn add_extension(path: &Path, postfix: &str) -> PathBuf {
+    let parts = [
+        path.file_name()
+            .expect("this string is weird, no file name"),
+        OsStr::new(postfix),
+    ];
+    let newname: OsString = parts.iter().copied().collect();
+    path.with_file_name(newname)
+}
+
 fn backup_file(path: &Path, compress: bool) -> io::Result<()> {
     if compress {
         compress_file(path)?;
     } else {
-        let backup_path = path.with_extension("bak");
+        let backup_path = add_extension(path, ".bak");
         fs::copy(path, backup_path)?;
     }
     Ok(())
@@ -136,7 +147,7 @@ fn backup_dir(path: &Path, compress: bool) -> io::Result<()> {
     if compress {
         compress_file(path)?;
     } else {
-        let backup_path = path.with_extension("bak.d");
+        let backup_path = add_extension(path, ".bak.d");
         copy_dir_all(path, &backup_path)?;
     }
     Ok(())
@@ -161,7 +172,7 @@ fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
 
 fn compress_file(path: &Path) -> io::Result<()> {
     let file = fs::File::open(path)?;
-    let compressed_path = path.with_extension("tar.zstd");
+    let compressed_path = add_extension(path, ".tar.zstd");
     let compressed_file = fs::File::create(compressed_path)?;
 
     let mut encoder = zstd::Encoder::new(compressed_file, 3)?;
