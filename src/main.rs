@@ -74,13 +74,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if a.len() < 2 {
             help_and_exit()
         }
-        if !a[1].starts_with("-")
+        if !(a[1].starts_with("-")
             || a[1] == "r"
             || a[1] == "res"
             || a[1] == "restore"
             || a[1] == "b"
             || a[1] == "bak"
-            || a[1] == "backup"
+            || a[1] == "backup")
         {
             let slice = &["".to_string()];
             a.splice(1..1, slice.iter().cloned());
@@ -88,7 +88,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cli = Cli::parse_from(a.iter());
         cli.command.unwrap()
     };
-    dbg!(&command);
 
     match command {
         Commands::Backup { paths, compress } => {
@@ -124,6 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn add_extension(path: &Path, postfix: &str) -> PathBuf {
+    // TODO: do something if the same extension already exists
     let parts = [
         path.file_name()
             .expect("this string is weird, no file name"),
@@ -165,7 +165,7 @@ fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
         } else if ty.is_file() {
             fs::copy(entry.path(), dst_path)?;
         }
-        // Ignore other types like symlinks for simplicity
+        // TODO: do something about other types like symlinks
     }
     Ok(())
 }
