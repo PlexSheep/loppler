@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+use zstd::DEFAULT_COMPRESSION_LEVEL;
 
 const HELP_TEMPLATE: &str = r"{about-section}
 {usage-heading} {usage}
@@ -102,8 +103,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let result = if path.is_dir() {
                     backup_dir(&path, compress)
-                } else {
+                } else if path.is_file() {
                     backup_file(&path, compress)
+                } else {
+                    panic!("this is neither a file nor a directory, don't know what to do")
                 };
 
                 if let Err(e) = result {
@@ -135,7 +138,8 @@ fn add_extension(path: &Path, postfix: &str) -> PathBuf {
 
 fn backup_file(path: &Path, compress: bool) -> io::Result<()> {
     if compress {
-        compress_file(path)?;
+        let archive_path = add_extension(path, ".tar.zstd");
+        make_archive(&archive_path, |a| a.append_path(path))?;
     } else {
         let backup_path = add_extension(path, ".bak");
         fs::copy(path, backup_path)?;
@@ -145,7 +149,8 @@ fn backup_file(path: &Path, compress: bool) -> io::Result<()> {
 
 fn backup_dir(path: &Path, compress: bool) -> io::Result<()> {
     if compress {
-        compress_file(path)?;
+        let archive_path = add_extension(path, ".tar.zstd");
+        make_archive(&archive_path, |a| a.append_dir_all("", path))?;
     } else {
         let backup_path = add_extension(path, ".bak.d");
         copy_dir_all(path, &backup_path)?;
@@ -164,20 +169,28 @@ fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
             copy_dir_all(&entry.path(), &dst_path)?;
         } else if ty.is_file() {
             fs::copy(entry.path(), dst_path)?;
+        } else {
+            eprintln!(
+                "neither a file nor a directory, skipping: {}",
+                entry.path().display()
+            );
         }
-        // TODO: do something about other types like symlinks
     }
     Ok(())
 }
 
-fn compress_file(path: &Path) -> io::Result<()> {
-    let file = fs::File::open(path)?;
-    let compressed_path = add_extension(path, ".tar.zstd");
-    let compressed_file = fs::File::create(compressed_path)?;
+fn make_archive<F>(archive_path: &Path, do_this: F) -> std::io::Result<()>
+where
+    F: FnOnce(&mut tar::Builder<zstd::Encoder<std::fs::File>>) -> std::io::Result<()>,
+{
+    let compressed_file = fs::File::create(archive_path)?;
 
-    let mut encoder = zstd::Encoder::new(compressed_file, 3)?;
-    io::copy(&mut io::BufReader::new(file), &mut encoder)?;
-    encoder.finish()?;
+    let mut compressor = zstd::Encoder::new(compressed_file, DEFAULT_COMPRESSION_LEVEL)?;
+    let mut archiver = tar::Builder::new(compressor);
+
+    do_this(&mut archiver)?;
+
+    archiver.finish()?;
 
     Ok(())
 }
