@@ -194,3 +194,34 @@ where
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::env::temp_dir;
+    use std::fs;
+    use std::os::unix::fs::MetadataExt;
+    use std::path::PathBuf;
+
+    use crate::make_archive;
+
+    #[test]
+    fn test_tar_zstd() {
+        const CONTENT: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+        let tdir = temp_dir();
+        std::env::set_current_dir(tdir).unwrap();
+        let tfile = PathBuf::from("foo");
+        let tfile_a = PathBuf::from("foo.tar.zstd");
+
+        fs::write(&tfile, CONTENT).unwrap();
+        assert!(tfile.exists());
+        assert_eq!(fs::read_to_string(&tfile).unwrap(), CONTENT);
+        assert!(tfile.exists());
+        let raw_size = fs::metadata(&tfile).unwrap().size();
+        assert!(raw_size > 1, "raw size was {raw_size}");
+
+        make_archive(&tfile_a, |a| a.append_path(&tfile)).unwrap();
+        assert!(tfile_a.exists());
+        let arch_size = fs::metadata(&tfile_a).unwrap().size();
+        assert!(arch_size > 1, "archive size was {arch_size}");
+    }
+}
