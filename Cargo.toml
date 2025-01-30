@@ -1,5 +1,5 @@
 [package]
-name = "loppler"
+name = "lopppel"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -7,8 +7,8 @@ authors = ["Christoph J. Scherr <software@cscherr.de>"]
 license = "GPL-3.0-or-later"
 description = "Simple local file backups with a bit of compression"
 readme = "README.md"
-homepage = "https://github.com/PlexSheep/loppler"
-repository = "https://github.com/PlexSheep/loppler"
+homepage = "https://github.com/PlexSheep/lopppel"
+repository = "https://github.com/PlexSheep/lopppel"
 keywords = ["cli"]
 
 

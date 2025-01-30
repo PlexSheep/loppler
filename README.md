@@ -1,19 +1,19 @@
-# loppler
+# lopppel
 
 ![Project badge](https://img.shields.io/badge/language-Rust-blue.svg)
-![Crates.io License](https://img.shields.io/crates/l/loppler)
-![GitHub Release](https://img.shields.io/github/v/release/PlexSheep/loppler)
-![GitHub language count](https://img.shields.io/github/languages/count/PlexSheep/loppler)
-[![Rust CI](https://github.com/PlexSheep/loppler/actions/workflows/cargo.yaml/badge.svg)](https://github.com/PlexSheep/hedu/actions/workflows/cargo.yaml)
+![Crates.io License](https://img.shields.io/crates/l/lopppel)
+![GitHub Release](https://img.shields.io/github/v/release/PlexSheep/lopppel)
+![GitHub language count](https://img.shields.io/github/languages/count/PlexSheep/lopppel)
+[![Rust CI](https://github.com/PlexSheep/lopppel/actions/workflows/cargo.yaml/badge.svg)](https://github.com/PlexSheep/hedu/actions/workflows/cargo.yaml)
 
 
 Simple local file backups with a bit of compression
 
-* [GitHub](https://github.com/PlexSheep/loppler)
-* [crates.io](https://crates.io/crates/loppler)
-* [docs.rs](https://docs.rs/crate/loppler/)
+* [GitHub](https://github.com/PlexSheep/lopppel)
+* [crates.io](https://crates.io/crates/lopppel)
+* [docs.rs](https://docs.rs/crate/lopppel/)
 
-loppler creates backup copies of files and directories right where they are
+lopppel creates backup copies of files and directories right where they are
 – just add .bak, .bak.d, or .tar.zstd if you need them smaller. No cloud,
 no complicated configs, just quick local copies when you need them.
 
