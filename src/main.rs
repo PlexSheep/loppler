@@ -205,9 +205,10 @@ mod tests {
 
     use crate::make_archive;
 
+    const CONTENT: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
     #[test]
-    fn test_tar_zstd() {
-        const CONTENT: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    fn test_make_archive() {
         let tdir = tempfile::tempdir().unwrap();
         std::env::set_current_dir(&tdir).unwrap();
         let tfile = PathBuf::from("foo");
@@ -220,11 +221,7 @@ mod tests {
         let raw_size = fs::metadata(&tfile).unwrap().size();
         assert!(raw_size > 1, "raw size was {raw_size}");
 
-        make_archive(&tfile_a, |a| {
-            a.append_path(tfile)?;
-            a.finish()
-        })
-        .unwrap();
+        make_archive(&tfile_a, |a| a.append_path(tfile)).unwrap();
         assert!(tfile_a.exists());
         let arch_size = fs::metadata(&tfile_a).unwrap().size();
         assert!(arch_size > 1, "archive size was {arch_size}");
