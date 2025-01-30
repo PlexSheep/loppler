@@ -181,11 +181,13 @@ fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
 
 fn make_archive<F>(archive_path: &Path, do_this: F) -> std::io::Result<()>
 where
-    F: FnOnce(&mut tar::Builder<zstd::Encoder<std::fs::File>>) -> std::io::Result<()>,
+    F: FnOnce(
+        &mut tar::Builder<zstd::stream::AutoFinishEncoder<std::fs::File>>,
+    ) -> std::io::Result<()>,
 {
     let compressed_file = fs::File::create(archive_path)?;
 
-    let compressor = zstd::Encoder::new(compressed_file, DEFAULT_COMPRESSION_LEVEL)?;
+    let compressor = zstd::Encoder::new(compressed_file, DEFAULT_COMPRESSION_LEVEL)?.auto_finish();
     let mut archiver = tar::Builder::new(compressor);
 
     do_this(&mut archiver)?;
@@ -197,7 +199,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::env::temp_dir;
     use std::fs;
     use std::os::unix::fs::MetadataExt;
     use std::path::PathBuf;
@@ -207,8 +208,8 @@ mod tests {
     #[test]
     fn test_tar_zstd() {
         const CONTENT: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-        let tdir = temp_dir();
-        std::env::set_current_dir(tdir).unwrap();
+        let tdir = tempfile::tempdir().unwrap();
+        std::env::set_current_dir(&tdir).unwrap();
         let tfile = PathBuf::from("foo");
         let tfile_a = PathBuf::from("foo.tar.zstd");
 
@@ -219,7 +220,11 @@ mod tests {
         let raw_size = fs::metadata(&tfile).unwrap().size();
         assert!(raw_size > 1, "raw size was {raw_size}");
 
-        make_archive(&tfile_a, |a| a.append_path(&tfile)).unwrap();
+        make_archive(&tfile_a, |a| {
+            a.append_path(tfile)?;
+            a.finish()
+        })
+        .unwrap();
         assert!(tfile_a.exists());
         let arch_size = fs::metadata(&tfile_a).unwrap().size();
         assert!(arch_size > 1, "archive size was {arch_size}");
