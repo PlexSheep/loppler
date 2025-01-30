@@ -185,7 +185,7 @@ where
 {
     let compressed_file = fs::File::create(archive_path)?;
 
-    let mut compressor = zstd::Encoder::new(compressed_file, DEFAULT_COMPRESSION_LEVEL)?;
+    let compressor = zstd::Encoder::new(compressed_file, DEFAULT_COMPRESSION_LEVEL)?;
     let mut archiver = tar::Builder::new(compressor);
 
     do_this(&mut archiver)?;
