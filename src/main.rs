@@ -197,6 +197,22 @@ where
     Ok(())
 }
 
+fn read_archive<F>(archive_path: &Path, do_this: F) -> std::io::Result<()>
+where
+    F: FnOnce(
+        &mut tar::Archive<zstd::Decoder<'_, std::io::BufReader<std::fs::File>>>,
+    ) -> std::io::Result<()>,
+{
+    let compressed_file = fs::File::open(archive_path)?;
+
+    let decompressor = zstd::Decoder::new(compressed_file)?;
+    let mut unarchiver = tar::Archive::new(decompressor);
+
+    do_this(&mut unarchiver)?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
