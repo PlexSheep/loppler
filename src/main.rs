@@ -219,9 +219,9 @@ mod tests {
     use std::os::unix::fs::MetadataExt;
     use std::path::PathBuf;
 
-    use crate::make_archive;
+    use crate::{make_archive, read_archive};
 
-    const CONTENT: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const CONTENT: &[u8] = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     #[test]
     fn test_make_archive() {
@@ -232,14 +232,28 @@ mod tests {
 
         fs::write(&tfile, CONTENT).unwrap();
         assert!(tfile.exists());
-        assert_eq!(fs::read_to_string(&tfile).unwrap(), CONTENT);
-        assert!(tfile.exists());
+        assert!(tfile.is_file());
+        assert_eq!(fs::read(&tfile).unwrap(), CONTENT);
         let raw_size = fs::metadata(&tfile).unwrap().size();
         assert!(raw_size > 1, "raw size was {raw_size}");
 
-        make_archive(&tfile_a, |a| a.append_path(tfile)).unwrap();
+        make_archive(&tfile_a, |a| a.append_path(&tfile)).unwrap();
         assert!(tfile_a.exists());
+        assert!(tfile_a.is_file());
         let arch_size = fs::metadata(&tfile_a).unwrap().size();
         assert!(arch_size > 1, "archive size was {arch_size}");
+
+        fs::remove_file(&tfile).unwrap();
+        assert!(!tfile.exists());
+
+        read_archive(&tfile_a, |a| a.unpack(&tdir)).unwrap();
+        assert!(tfile.exists());
+        assert!(!tfile.is_dir());
+        assert!(tfile.is_file());
+        let copy_size = fs::metadata(&tfile).unwrap().size();
+        assert!(copy_size > 1, "archive size was {arch_size}");
+
+        let copy_content = fs::read(&tfile).unwrap();
+        assert_eq!(CONTENT, copy_content);
     }
 }
