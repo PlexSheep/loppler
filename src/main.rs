@@ -161,67 +161,65 @@ fn remove_extension(path: &Path, suffix: &str) -> PathBuf {
 }
 
 fn restore(path: &Path) -> io::Result<()> {
-    if let Some(ext) = path.extension() {
-        let ext = ext.to_string_lossy();
-        if ext == "tar.zstd" {
-            if !path.is_file() {
-                panic!("archive name but not an archive")
-            }
-
-            let target = if let Some(p) = path.parent() {
-                p
-            } else {
-                return Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("path has no parent path: {}", path.display()),
-                ));
-            };
-
-            read_archive(path, |a| a.unpack(target))?;
-            Ok(())
-        } else if ext == "bak" {
-            if !path.is_file() {
-                panic!("bak name but not a file")
-            }
-
-            let target = remove_extension(path, "bak");
-            fs::copy(path, target)?;
-            Ok(())
-        } else if ext == "bak.d" {
-            if !path.is_file() {
-                panic!("bak.d name but not a directory")
-            }
-            let target = remove_extension(path, "bak");
-            todo!("copy all dir");
-            Ok(())
-        } else {
-            panic!("unknown file extension: {ext}")
+    let path_s: String = path.display().to_string();
+    if path_s.ends_with("tar.zstd") | path_s.ends_with("tar.zst") {
+        if !path.is_file() {
+            panic!("archive name but not an archive")
         }
+
+        let target = if let Some(p) = path.parent() {
+            p
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("path has no parent path: {}", path_s),
+            ));
+        };
+
+        read_archive(path, |a| a.unpack(target))?;
+        Ok(())
+    } else if path_s.ends_with("bak") {
+        if !path.is_file() {
+            panic!("bak name but not a file")
+        }
+
+        let target = remove_extension(path, "bak");
+        fs::copy(path, target)?;
+        Ok(())
+    } else if path_s.ends_with("bak.d") {
+        if path.is_file() {
+            panic!("bak.d name but not a directory")
+        }
+        let target = remove_extension(path, "bak.d");
+        copy_dir_all(path, &target)?;
+        Ok(())
     } else {
-        panic!("unknown file {}", path.display())
+        panic!("unknown file {}", path_s)
     }
 }
 
-fn backup_file(path: &Path, compress: bool) -> io::Result<()> {
+fn backup_file(path: &Path, compress: bool) -> io::Result<PathBuf> {
     if compress {
         let archive_path = add_extension(path, ".tar.zstd");
         make_archive(&archive_path, |a| a.append_path(path))?;
+        Ok(archive_path)
     } else {
         let backup_path = add_extension(path, ".bak");
-        fs::copy(path, backup_path)?;
+        fs::copy(path, &backup_path)?;
+        Ok(backup_path)
     }
-    Ok(())
 }
 
-fn backup_dir(path: &Path, compress: bool) -> io::Result<()> {
+fn backup_dir(path: &Path, compress: bool) -> io::Result<PathBuf> {
     if compress {
         let archive_path = add_extension(path, ".tar.zstd");
         make_archive(&archive_path, |a| a.append_dir_all("", path))?;
+        Ok(archive_path)
     } else {
         let backup_path = add_extension(path, ".bak.d");
         copy_dir_all(path, &backup_path)?;
+        Ok(backup_path)
     }
-    Ok(())
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
