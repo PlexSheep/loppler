@@ -298,7 +298,8 @@ mod tests {
     #[test]
     fn test_make_archive() -> io::Result<()> {
         let tdir = tempdir()?;
-        std::env::set_current_dir(&tdir).unwrap();
+        std::env::set_current_dir(&tdir).unwrap(); // NOTE: if multiple tests use this, this
+                                                   // creates a race condition
         let tfile = PathBuf::from("foo");
         let tfile_a = PathBuf::from("foo.tar.zstd");
 
@@ -309,6 +310,7 @@ mod tests {
         let raw_size = fs::metadata(&tfile).unwrap().size();
         assert!(raw_size > 1, "raw size was {raw_size}");
 
+        // NOTE: append_path needs a relative path
         make_archive(&tfile_a, |a| a.append_path(&tfile)).unwrap();
         assert!(tfile_a.exists());
         assert!(tfile_a.is_file());
@@ -334,9 +336,8 @@ mod tests {
     #[test]
     fn test_simple_bak_restore() -> io::Result<()> {
         let tdir = tempdir()?;
-        std::env::set_current_dir(&tdir).unwrap();
-        let tfile = PathBuf::from("foo");
-        let tfile_b = PathBuf::from("foo.bak");
+        let tfile = tdir.join("foo");
+        let tfile_b = tdir.join("foo.bak");
 
         fs::write(&tfile, CONTENT).unwrap();
         assert!(tfile.exists());
