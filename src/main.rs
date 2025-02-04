@@ -280,24 +280,27 @@ where
 #[cfg(test)]
 mod tests {
     use std::os::unix::fs::MetadataExt;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use std::{fs, io};
 
-    use crate::{backup_file, make_archive, read_archive, restore};
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    use crate::{backup_dir, backup_file, make_archive, read_archive, restore};
 
     const CONTENT: &[u8] = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-    fn tempdir() -> io::Result<PathBuf> {
-        let t = std::env::temp_dir().join(fastrand::u32(0..u32::MAX).to_string());
-        fs::create_dir_all(&t)?;
-        Ok(t)
+    fn filesize(p: &Path) -> io::Result<u64> {
+        Ok(fs::metadata(p)?.size())
     }
 
     #[test]
+    #[serial]
     fn test_make_archive() -> io::Result<()> {
-        let tdir = tempdir()?;
-        std::env::set_current_dir(&tdir).unwrap(); // NOTE: if multiple tests use this, this
-                                                   // creates a race condition
+        let t = tempdir()?;
+        let tdir = t.path();
+        std::env::set_current_dir(tdir).unwrap(); // NOTE: if multiple tests use this, this
+                                                  // creates a race condition
         let tfile = PathBuf::from("foo");
         let tfile_a = PathBuf::from("foo.tar.zstd");
 
@@ -318,7 +321,7 @@ mod tests {
         fs::remove_file(&tfile).unwrap();
         assert!(!tfile.exists());
 
-        read_archive(&tfile_a, |a| a.unpack(&tdir)).unwrap();
+        read_archive(&tfile_a, |a| a.unpack(tdir)).unwrap();
         assert!(tfile.exists());
         assert!(!tfile.is_dir());
         assert!(tfile.is_file());
@@ -333,7 +336,8 @@ mod tests {
 
     #[test]
     fn test_simple_bak_restore() -> io::Result<()> {
-        let tdir = tempdir()?;
+        let t = tempdir()?;
+        let tdir = t.path();
         let tfile = tdir.join("foo");
         let tfile_b = tdir.join("foo.bak");
 
@@ -341,7 +345,7 @@ mod tests {
         assert!(tfile.exists());
         assert!(tfile.is_file());
         assert_eq!(fs::read(&tfile).unwrap(), CONTENT);
-        let raw_size = fs::metadata(&tfile).unwrap().size();
+        let raw_size = filesize(&tfile)?;
         assert!(raw_size > 1, "raw size was {raw_size}");
 
         backup_file(&tfile, false).unwrap();
@@ -349,7 +353,7 @@ mod tests {
         assert!(tfile_b.exists());
         assert!(tfile_b.is_file());
         assert_eq!(fs::read(&tfile_b).unwrap(), CONTENT);
-        let raw_size = fs::metadata(&tfile_b).unwrap().size();
+        let raw_size = filesize(&tfile)?;
         assert!(raw_size > 1, "raw size was {raw_size}");
 
         fs::remove_file(&tfile).unwrap();
@@ -360,7 +364,7 @@ mod tests {
         assert!(tfile.exists());
         assert!(tfile.is_file());
         assert_eq!(fs::read(&tfile).unwrap(), CONTENT);
-        let raw_size = fs::metadata(&tfile).unwrap().size();
+        let raw_size = filesize(&tfile)?;
         assert!(raw_size > 1, "raw size was {raw_size}");
 
         Ok(())
