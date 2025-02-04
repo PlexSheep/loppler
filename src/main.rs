@@ -128,12 +128,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn confirm(prompt: String) -> io::Result<bool> {
-    print!("{prompt} - y/N");
+    print!("{prompt} - y/N ");
     io::stdout().flush()?;
     let mut buf = String::new();
     loop {
         io::stdin().read_line(&mut buf)?;
-        match buf.to_lowercase().as_str() {
+        buf = buf.trim().to_lowercase();
+        match buf.as_str() {
             "y" | "yes" => return Ok(true),
             "" | "n" | "no" => return Ok(false),
             _ => println!("That is neither yes or no"),
