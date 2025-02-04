@@ -369,4 +369,63 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_dir_bak_restore() -> io::Result<()> {
+        let t = tempdir()?;
+        let tdir = t.path();
+        let tdir_a = tdir.join("ichi");
+        let tdir_b = tdir_a.join("ni");
+        let dirs = [&tdir_a, &tdir_b];
+        let names = ["foo", "bar", "qux"];
+        fastrand::seed(133719);
+
+        let mut contents: Vec<[u8; 16]> = vec![];
+        for _ in 0..(dirs.len() * names.len()) {
+            contents.push(fastrand::u128(0..u128::MAX).to_le_bytes());
+        }
+
+        let mut i = 0;
+        for sdir in dirs {
+            fs::create_dir_all(sdir)?;
+            assert!(sdir.exists());
+            assert!(sdir.is_dir());
+            for fname in names {
+                let p = sdir.join(fname);
+                fs::write(&p, contents[i])?;
+                assert!(p.exists());
+                assert!(p.is_file());
+                assert!(p.is_file());
+                let raw_size = filesize(&p)?;
+                assert!(raw_size > 1, "raw size of {} was {raw_size}", p.display());
+                i += 1;
+            }
+        }
+
+        let backup = backup_dir(&tdir_a, false)?;
+        dbg!(&tdir_a);
+        dbg!(fs::metadata(&tdir_a)?);
+        fs::remove_dir_all(&tdir_a)?;
+        dbg!(&backup);
+        dbg!(fs::metadata(&backup)?);
+        restore(&backup)?;
+        dbg!(&tdir_a);
+        dbg!(fs::metadata(&tdir_a)?);
+
+        let mut i = 0;
+        for sdir in dirs {
+            assert!(sdir.exists());
+            assert!(sdir.is_dir());
+            for fname in names {
+                let p = sdir.join(fname);
+                assert!(p.exists());
+                assert!(p.is_file());
+                let actual = fs::read(&p)?;
+                assert_eq!(actual, contents[i]);
+                i += 1;
+            }
+        }
+
+        Ok(())
+    }
 }
