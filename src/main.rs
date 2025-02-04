@@ -281,17 +281,23 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use std::os::unix::fs::MetadataExt;
     use std::path::PathBuf;
+    use std::{fs, io};
 
-    use crate::{make_archive, read_archive};
+    use crate::{backup_file, make_archive, read_archive, restore};
 
     const CONTENT: &[u8] = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
+    fn tempdir() -> io::Result<PathBuf> {
+        let t = std::env::temp_dir().join(fastrand::u32(0..u32::MAX).to_string());
+        fs::create_dir_all(&t)?;
+        Ok(t)
+    }
+
     #[test]
-    fn test_make_archive() {
-        let tdir = tempfile::tempdir().unwrap();
+    fn test_make_archive() -> io::Result<()> {
+        let tdir = tempdir()?;
         std::env::set_current_dir(&tdir).unwrap();
         let tfile = PathBuf::from("foo");
         let tfile_a = PathBuf::from("foo.tar.zstd");
@@ -321,5 +327,43 @@ mod tests {
 
         let copy_content = fs::read(&tfile).unwrap();
         assert_eq!(CONTENT, copy_content);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_simple_bak_restore() -> io::Result<()> {
+        let tdir = tempdir()?;
+        std::env::set_current_dir(&tdir).unwrap();
+        let tfile = PathBuf::from("foo");
+        let tfile_b = PathBuf::from("foo.bak");
+
+        fs::write(&tfile, CONTENT).unwrap();
+        assert!(tfile.exists());
+        assert!(tfile.is_file());
+        assert_eq!(fs::read(&tfile).unwrap(), CONTENT);
+        let raw_size = fs::metadata(&tfile).unwrap().size();
+        assert!(raw_size > 1, "raw size was {raw_size}");
+
+        backup_file(&tfile, false).unwrap();
+
+        assert!(tfile_b.exists());
+        assert!(tfile_b.is_file());
+        assert_eq!(fs::read(&tfile_b).unwrap(), CONTENT);
+        let raw_size = fs::metadata(&tfile_b).unwrap().size();
+        assert!(raw_size > 1, "raw size was {raw_size}");
+
+        fs::remove_file(&tfile).unwrap();
+        assert!(!tfile.exists());
+
+        restore(&tfile_b).unwrap();
+
+        assert!(tfile.exists());
+        assert!(tfile.is_file());
+        assert_eq!(fs::read(&tfile).unwrap(), CONTENT);
+        let raw_size = fs::metadata(&tfile).unwrap().size();
+        assert!(raw_size > 1, "raw size was {raw_size}");
+
+        Ok(())
     }
 }
