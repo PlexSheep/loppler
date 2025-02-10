@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use std::ffi::{OsStr, OsString};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::{fs, io, iter};
+use std::{fs, io};
 use zstd::DEFAULT_COMPRESSION_LEVEL;
 
 const HELP_TEMPLATE: &str = r"{about-section}
