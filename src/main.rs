@@ -174,6 +174,15 @@ fn remove_extension(path: &Path, suffix: &str) -> PathBuf {
 }
 
 fn restore(path: &Path) -> io::Result<()> {
+    if !path.exists() {
+        let e = io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("File or directory not found: {}", path.display()),
+        );
+        eprintln!("{e}");
+        return Err(e);
+    }
+
     let path_s: String = path.display().to_string();
     if path_s.ends_with("tar.zstd") | path_s.ends_with("tar.zst") {
         if !path.is_file() {
