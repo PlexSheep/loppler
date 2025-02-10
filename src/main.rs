@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use std::ffi::{OsStr, OsString};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::{fs, io};
+use std::{fs, io, iter};
 use zstd::DEFAULT_COMPRESSION_LEVEL;
 
 const HELP_TEMPLATE: &str = r"{about-section}
@@ -120,7 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Restoring from {:?}", path);
             restore(&path)?;
             if delete && (cli.confirm || confirm(format!("delete {}?", path.display()))?) {
-                fs::remove_dir_all(path)?;
+                recursive_remove(&path)?;
             }
         }
     }
@@ -141,6 +141,17 @@ fn confirm(prompt: String) -> io::Result<bool> {
             _ => println!("That is neither yes or no"),
         }
     }
+}
+
+fn recursive_remove(path: &Path) -> io::Result<()> {
+    if path.is_dir() {
+        fs::remove_dir_all(path)?;
+    } else if path.is_file() || path.is_symlink() {
+        fs::remove_file(path)?;
+    } else {
+        eprintln!("skipping unknown file: {}", path.display());
+    }
+    Ok(())
 }
 
 fn add_extension(path: &Path, postfix: &str) -> PathBuf {
