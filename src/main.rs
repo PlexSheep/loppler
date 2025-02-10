@@ -83,6 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             || a[1] == "b"
             || a[1] == "bak"
             || a[1] == "backup")
+            || a[1].contains("bak")
         {
             let slice = &["".to_string()];
             a.splice(1..1, slice.iter().cloned());
