@@ -188,10 +188,17 @@ fn restore(path: &Path) -> io::Result<()> {
     }
 
     let path_s: String = path.display().to_string();
-    if path_s.ends_with("tar.zstd") | path_s.ends_with("tar.zst") {
+    if path_s.ends_with("tar.zstd") || path_s.ends_with("tar.zst") {
         if !path.is_file() {
             panic!("archive name but not an archive")
         }
+        let ext = if path_s.ends_with("tar.zstd") {
+            "tar.zstd"
+        } else if path_s.ends_with("tar.zst") {
+            "tar.zst"
+        } else {
+            unreachable!("the if above should have covered this")
+        };
 
         let target = if let Some(p) = path.parent() {
             p
@@ -201,6 +208,7 @@ fn restore(path: &Path) -> io::Result<()> {
                 format!("path has no parent path: {}", path_s),
             ));
         };
+        let target = target.join(remove_extension(path, ext));
 
         read_archive(path, |a| a.unpack(target))?;
         Ok(())
@@ -293,12 +301,30 @@ where
         &mut tar::Archive<zstd::Decoder<'_, std::io::BufReader<std::fs::File>>>,
     ) -> std::io::Result<()>,
 {
-    let compressed_file = fs::File::open(archive_path)?;
+    let compressed_file = match fs::File::open(archive_path) {
+        Err(e) => {
+            eprintln!("could not open archive: {e}");
+            return Err(e);
+        }
+        Ok(f) => f,
+    };
 
-    let decompressor = zstd::Decoder::new(compressed_file)?;
+    let decompressor = match zstd::Decoder::new(compressed_file) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("could not open zstd decoder: {e}");
+            return Err(e);
+        }
+    };
     let mut unarchiver = tar::Archive::new(decompressor);
 
-    do_this(&mut unarchiver)?;
+    match do_this(&mut unarchiver) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("could perform read_archive actions: {e}");
+            return Err(e);
+        }
+    };
 
     Ok(())
 }
