@@ -37,7 +37,6 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// Create backup of files or directories, default action
-    #[clap(alias = "")]
     #[clap(visible_alias = "b")]
     #[clap(visible_alias = "bak")]
     Backup {
@@ -87,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let slice = if a[1].contains("bak") {
                 &["restore".to_string()]
             } else {
-                &["".to_string()]
+                &["backup".to_string()]
             };
 
             a.splice(1..1, slice.iter().cloned());
