@@ -159,7 +159,6 @@ fn recursive_remove(path: &Path) -> io::Result<()> {
 }
 
 fn add_extension(path: &Path, postfix: &str) -> PathBuf {
-    // TODO: do something if the same extension already exists
     let parts = [
         path.file_name()
             .expect("this string is weird, no file name"),
@@ -192,24 +191,9 @@ fn restore(path: &Path) -> io::Result<()> {
         if !path.is_file() {
             panic!("archive name but not an archive")
         }
-        let ext = if path_s.ends_with("tar.zstd") {
-            "tar.zstd"
-        } else if path_s.ends_with("tar.zst") {
-            "tar.zst"
-        } else {
-            unreachable!("the if above should have covered this")
-        };
 
-        let target = if let Some(p) = path.parent() {
-            p
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("path has no parent path: {}", path_s),
-            ));
-        };
-        let target = target.join(remove_extension(path, ext));
-
+        let target = std::env::current_dir()?;
+        assert!(target.is_dir());
         read_archive(path, |a| a.unpack(target))?;
         Ok(())
     } else if path_s.ends_with("bak") {
@@ -247,7 +231,7 @@ fn backup_file(path: &Path, compress: bool) -> io::Result<PathBuf> {
 fn backup_dir(path: &Path, compress: bool) -> io::Result<PathBuf> {
     if compress {
         let archive_path = add_extension(path, ".tar.zstd");
-        make_archive(&archive_path, |a| a.append_dir_all("", path))?;
+        make_archive(&archive_path, |a| a.append_dir_all(path, path))?;
         Ok(archive_path)
     } else {
         let backup_path = add_extension(path, ".bak.d");
