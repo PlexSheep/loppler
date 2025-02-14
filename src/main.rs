@@ -58,6 +58,10 @@ enum Commands {
         /// Delete backup after successful restore
         #[arg(short = 'd', long)]
         delete: bool,
+
+        /// Directory to restore to
+        #[arg(short = 'o', long = "output")]
+        output_dir: Option<PathBuf>,
     },
 }
 
@@ -119,9 +123,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Commands::Restore { path, delete } => {
+        Commands::Restore {
+            path,
+            delete,
+            output_dir,
+        } => {
             println!("Restoring from {:?}", path);
-            restore(&path)?;
+            let out = output_dir.unwrap_or(std::env::current_dir()?);
+            restore(&path, &out)?;
             if delete && (cli.confirm || confirm(format!("delete {}?", path.display()))?) {
                 recursive_remove(&path)?;
             }
@@ -175,11 +184,30 @@ fn remove_extension(path: &Path, suffix: &str) -> PathBuf {
     }
 }
 
-fn restore(path: &Path) -> io::Result<()> {
+fn restore(path: &Path, output_dir: &Path) -> io::Result<()> {
     if !path.exists() {
         let e = io::Error::new(
             io::ErrorKind::NotFound,
             format!("File or directory not found: {}", path.display()),
+        );
+        eprintln!("{e}");
+        return Err(e);
+    }
+    if !output_dir.exists() {
+        let e = io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("File or directory not found: {}", output_dir.display()),
+        );
+        eprintln!("{e}");
+        return Err(e);
+    }
+    if !output_dir.is_dir() {
+        let e = io::Error::new(
+            io::ErrorKind::NotFound,
+            format!(
+                "Output directory is not a directory: {}",
+                output_dir.display()
+            ),
         );
         eprintln!("{e}");
         return Err(e);
@@ -191,9 +219,7 @@ fn restore(path: &Path) -> io::Result<()> {
             panic!("archive name but not an archive")
         }
 
-        let target = std::env::current_dir()?;
-        assert!(target.is_dir());
-        read_archive(path, |a| a.unpack(target))?;
+        read_archive(path, |a| a.unpack(output_dir))?;
         Ok(())
     } else if path_s.ends_with("bak") {
         if !path.is_file() {
@@ -201,6 +227,7 @@ fn restore(path: &Path) -> io::Result<()> {
         }
 
         let target = remove_extension(path, "bak");
+        let target = output_dir.join(target.file_name().unwrap());
         fs::copy(path, target)?;
         Ok(())
     } else if path_s.ends_with("bak.d") {
@@ -208,6 +235,7 @@ fn restore(path: &Path) -> io::Result<()> {
             panic!("bak.d name but not a directory")
         }
         let target = remove_extension(path, "bak.d");
+        let target = output_dir.join(target.file_name().unwrap());
         copy_dir_all(path, &target)?;
         Ok(())
     } else {
@@ -394,7 +422,7 @@ mod tests {
         fs::remove_file(&tfile).unwrap();
         assert!(!tfile.exists());
 
-        restore(&tfile_b).unwrap();
+        restore(&tfile_b, tdir).unwrap();
 
         assert!(tfile.exists());
         assert!(tfile.is_file());
@@ -443,7 +471,7 @@ mod tests {
         fs::remove_dir_all(&tdir_a)?;
         dbg!(&backup);
         dbg!(fs::metadata(&backup)?);
-        restore(&backup)?;
+        restore(&backup, tdir)?;
         dbg!(&tdir_a);
         dbg!(fs::metadata(&tdir_a)?);
 
