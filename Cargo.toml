@@ -15,7 +15,7 @@ keywords = ["cli"]
 [dependencies]
 clap = { version = "4.5.27", features = ["derive"] }
 tar = "0.4.43"
-zstd = { version = "0.13.2", features = [] }
+zstd = { version = "0.13.3", features = [] }
 
 [dev-dependencies]
 fastrand = "2.3.0"
